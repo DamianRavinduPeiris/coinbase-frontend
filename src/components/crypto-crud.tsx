@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, Edit, Plus, Coins} from "lucide-react";
+import { Trash2, Edit, Plus, Coins } from "lucide-react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import Banner from "./ui/banner";
@@ -21,7 +22,7 @@ interface Crypto {
   symbol: string;
   price: number;
 }
-function validatePrice(value:string) {
+function validatePrice(value: string) {
   if (/^\d*\.?\d*$/.test(value) === false) {
     return;
   }
@@ -95,7 +96,7 @@ export function CryptoCrud() {
                 placeholder="Price"
                 value={newCrypto.price}
                 onChange={(e) => {
-                  validatePrice(e);
+                  validatePrice(e.target.value);
                   setNewCrypto({
                     ...newCrypto,
                     price: parseFloat(e.target.value),
