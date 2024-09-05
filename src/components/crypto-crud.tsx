@@ -1,47 +1,67 @@
-import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trash2, Edit, Plus, Coins } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trash2, Edit, Plus, Coins} from "lucide-react";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
+import Banner from "./ui/banner";
 
 interface Crypto {
-  id: number
-  name: string
-  symbol: string
-  price: number
+  coinId: string;
+  name: string;
+  symbol: string;
+  price: number;
 }
-
+function validatePrice(value:string) {
+  if (/^\d*\.?\d*$/.test(value) === false) {
+    return;
+  }
+}
 export function CryptoCrud() {
-  const [cryptos, setCryptos] = useState<Crypto[]>([
-    { id: 1, name: "'Bitcoin'", symbol: "'BTC'", price: 30000 },
-    { id: 2, name: "'Ethereum'", symbol: "'ETH'", price: 2000 },
-  ])
-  const [newCrypto, setNewCrypto] = useState<Crypto>({ id:0,name: "", symbol: "", price: 0 })
-  const [editingId, setEditingId] = useState<number | null>(null)
-
-  const addCrypto = () => {
-    setCryptos([...cryptos, { ...newCrypto, id: Date.now() }])
-    setNewCrypto({ id:0,name: "", symbol: "", price: 0 })
+  async function fetchAllCoins() {
+    try {
+      const response = await axios.get(
+        "http://localhost:8080/v1/coins/searchAll"
+      );
+      setCryptos(response.data.data);
+    } catch (error) {
+      toast.error("No coins to display, Start by adding new Coins.");
+    }
   }
-
-  const updateCrypto = (id: number, updatedCrypto: Omit<Crypto, "'id'">) => {
-    setCryptos(cryptos.map(crypto => crypto.id === id ? { ...crypto, ...updatedCrypto } : crypto))
-    setEditingId(null)
-  }
-
-  const deleteCrypto = (id: number) => {
-    setCryptos(cryptos.filter(crypto => crypto.id !== id))
-  }
+  useEffect(() => {
+    fetchAllCoins();
+  }, []);
+  const [cryptos, setCryptos] = useState<Crypto[]>([]);
+  const [newCrypto, setNewCrypto] = useState<Crypto>({
+    coinId: "",
+    name: "",
+    symbol: "",
+    price: 0,
+  });
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
+      <div>
+        <Toaster />
+      </div>
+
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center">
           <Coins className="h-8 w-8 text-blue-500 mr-2" />
           <h1 className="text-3xl font-bold text-gray-900">Coinbase</h1>
         </div>
       </header>
+
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="mb-8">
           <CardHeader>
@@ -50,28 +70,80 @@ export function CryptoCrud() {
           <CardContent>
             <div className="flex space-x-4">
               <Input
+                placeholder="CoinID"
+                value={newCrypto.coinId}
+                onChange={(e) =>
+                  setNewCrypto({ ...newCrypto, coinId: e.target.value })
+                }
+              />
+              <Input
                 placeholder="Name"
                 value={newCrypto.name}
-                onChange={(e) => setNewCrypto({ ...newCrypto, name: e.target.value })}
+                onChange={(e) =>
+                  setNewCrypto({ ...newCrypto, name: e.target.value })
+                }
               />
               <Input
                 placeholder="Symbol"
                 value={newCrypto.symbol}
-                onChange={(e) => setNewCrypto({ ...newCrypto, symbol: e.target.value })}
+                onChange={(e) =>
+                  setNewCrypto({ ...newCrypto, symbol: e.target.value })
+                }
               />
               <Input
                 type="number"
                 placeholder="Price"
                 value={newCrypto.price}
-                onChange={(e) => setNewCrypto({ ...newCrypto, price: parseFloat(e.target.value) })}
+                onChange={(e) => {
+                  validatePrice(e);
+                  setNewCrypto({
+                    ...newCrypto,
+                    price: parseFloat(e.target.value),
+                  });
+                }}
               />
-              <Button onClick={addCrypto}>
+              <Button
+                onClick={async () => {
+                  if (
+                    cryptos.find(
+                      (crypto) => crypto.coinId === newCrypto.coinId
+                    ) ||
+                    cryptos.find((crypto) => crypto.name === newCrypto.name)
+                  ) {
+                    toast.error("Coin already exists!");
+                    return;
+                  } else if (
+                    newCrypto.coinId === "" ||
+                    newCrypto.name === "" ||
+                    newCrypto.symbol === "" ||
+                    newCrypto.price === 0
+                  ) {
+                    toast.error("Please fill all the fields!");
+                    return;
+                  }
+                  setCryptos([...cryptos, newCrypto]);
+                  try {
+                    const res = await axios.post(
+                      "http://localhost:8080/v1/coins/add",
+                      newCrypto
+                    );
+                    console.log(res.data);
+                    if (res.data.statusCode === 201) {
+                      return toast.success("Coin Added Successfully");
+                    }
+                  } catch (error) {
+                    console.error("Error adding coin:", error);
+                    toast.error("Something went wrong!");
+                  }
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" /> Add Crypto
               </Button>
             </div>
           </CardContent>
         </Card>
         <Card>
+          {cryptos.length === 0 ? <Banner /> : null}
           <CardHeader>
             <CardTitle>Cryptocurrencies</CardTitle>
           </CardHeader>
@@ -79,6 +151,7 @@ export function CryptoCrud() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>CoinId</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Symbol</TableHead>
                   <TableHead>Price</TableHead>
@@ -86,58 +159,149 @@ export function CryptoCrud() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cryptos.map((crypto) => (
-                  <TableRow key={crypto.id}>
-                    <TableCell>
-                      {editingId === crypto.id ? (
-                        <Input
-                          value={crypto.name}
-                          onChange={(e) => updateCrypto(crypto.id, { ...crypto, name: e.target.value })}
-                        />
-                      ) : (
-                        crypto.name
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === crypto.id ? (
-                        <Input
-                          value={crypto.symbol}
-                          onChange={(e) => updateCrypto(crypto.id, { ...crypto, symbol: e.target.value })}
-                        />
-                      ) : (
-                        crypto.symbol
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === crypto.id ? (
-                        <Input
-                          type="number"
-                          value={crypto.price}
-                          onChange={(e) => updateCrypto(crypto.id, { ...crypto, price: parseFloat(e.target.value) })}
-                        />
-                      ) : (
-                        `$${crypto.price.toFixed(2)}`
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === crypto.id ? (
-                        <Button onClick={() => setEditingId(null)}>Save</Button>
-                      ) : (
-                        <Button variant="ghost" onClick={() => setEditingId(crypto.id)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" onClick={() => deleteCrypto(crypto.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {cryptos.length > 0 ? (
+                  <>
+                    {cryptos.map((crypto) => (
+                      <TableRow key={crypto.coinId}>
+                        <TableCell>
+                          {editingId === crypto.coinId ? (
+                            <Input value={crypto.coinId} />
+                          ) : (
+                            crypto.coinId
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === crypto.coinId ? (
+                            <Input
+                              onChange={(e) => {
+                                setNewCrypto({
+                                  ...newCrypto,
+                                  name: e.target.value,
+                                });
+                              }}
+                            />
+                          ) : (
+                            crypto.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === crypto.coinId ? (
+                            <Input
+                              onChange={(e) => {
+                                setNewCrypto({
+                                  ...newCrypto,
+                                  symbol: e.target.value,
+                                });
+                              }}
+                            />
+                          ) : (
+                            crypto.symbol
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === crypto.coinId ? (
+                            <Input
+                              type="number"
+                              onKeyDown={(e) => {
+                                if (!/[0-9.]/.test(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onChange={(e) => {
+                                setNewCrypto({
+                                  ...newCrypto,
+                                  price: parseFloat(e.target.value),
+                                });
+                              }}
+                            />
+                          ) : (
+                            `$${crypto.price.toFixed(2)}`
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === crypto.coinId ? (
+                            <Button
+                              onClick={async () => {
+                                setEditingId(null);
+                                setNewCrypto({
+                                  ...newCrypto,
+                                  coinId: crypto.coinId,
+                                });
+                                console.log("newCrypto", newCrypto);
+                                if (
+                                  newCrypto.coinId === "" ||
+                                  newCrypto.name === "" ||
+                                  newCrypto.symbol === "" ||
+                                  newCrypto.price === 0
+                                ) {
+                                  toast.error("Please fill all the fields!");
+                                  return;
+                                }
+
+                                try {
+                                  const res = await axios.put(
+                                    "http://localhost:8080/v1/coins/update",
+                                    newCrypto
+                                  );
+                                  console.log(res.data);
+                                  if (res.data.statusCode === 200) {
+                                    fetchAllCoins();
+
+                                    return toast.success(
+                                      "Coin updated Successfully"
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error("Error adding coin:", error);
+                                  toast.error("Something went wrong!");
+                                }
+                              }}
+                            >
+                              Save
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              onClick={() => setEditingId(crypto.coinId)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost">
+                            <Trash2
+                              className="h-4 w-4 text-red-500"
+                              onClick={async () => {
+                                try {
+                                  const res = await axios.delete(
+                                    "http://localhost:8080/v1/coins/delete?id=" +
+                                      crypto.coinId
+                                  );
+                                  if (res.data.statusCode === 200)
+                                    setCryptos((prevCryptos) =>
+                                      prevCryptos.filter(
+                                        (coin) => coin.coinId !== crypto.coinId
+                                      )
+                                    );
+                                  {
+                                    toast.success("Coin Deleted Successfully");
+                                  }
+                                } catch (error: unknown) {
+                                  console.error("Error deleting coin:", error);
+                                  toast.error("Something went wrong!");
+                                }
+                              }}
+                            />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                ) : null}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </main>
     </div>
-  )
+  );
 }
