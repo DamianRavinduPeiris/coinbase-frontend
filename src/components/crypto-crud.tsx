@@ -30,9 +30,7 @@ function validatePrice(value: string) {
 export function CryptoCrud() {
   async function fetchAllCoins() {
     try {
-      const response = await axios.get(
-        "http://localhost:8080/v1/coins/searchAll"
-      );
+      const response = await axios.get(import.meta.env.VITE_BASE_URL+'searchAll');
       setCryptos(response.data.data);
     } catch (error) {
       toast.error("No coins to display, Start by adding new Coins.");
@@ -124,10 +122,7 @@ export function CryptoCrud() {
                   }
                   setCryptos([...cryptos, newCrypto]);
                   try {
-                    const res = await axios.post(
-                      "http://localhost:8080/v1/coins/add",
-                      newCrypto
-                    );
+                    const res = await axios.post(import.meta.env.VITE_BASE_URL+"add",newCrypto);
                     console.log(res.data);
                     if (res.data.statusCode === 201) {
                       return toast.success("Coin Added Successfully");
@@ -241,7 +236,7 @@ export function CryptoCrud() {
 
                                 try {
                                   const res = await axios.put(
-                                    "http://localhost:8080/v1/coins/update",
+                                    import.meta.env.VITE_BASE_URL+"update",
                                     newCrypto
                                   );
                                   console.log(res.data);
@@ -273,10 +268,7 @@ export function CryptoCrud() {
                               className="h-4 w-4 text-red-500"
                               onClick={async () => {
                                 try {
-                                  const res = await axios.delete(
-                                    "http://localhost:8080/v1/coins/delete?id=" +
-                                      crypto.coinId
-                                  );
+                                  const res = await axios.delete(import.meta.env.VITE_BASE_URL+"delete?id="+crypto.coinId);
                                   if (res.data.statusCode === 200)
                                     setCryptos((prevCryptos) =>
                                       prevCryptos.filter(
