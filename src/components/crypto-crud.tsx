@@ -33,6 +33,7 @@ export function CryptoCrud() {
       const response = await axios.get(import.meta.env.VITE_BASE_URL+'searchAll');
       setCryptos(response.data.data);
     } catch (error) {
+      console.log('Something went wrong', error);
       toast.error("No coins to display, Start by adding new Coins.");
     }
   }
